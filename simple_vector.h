@@ -4,7 +4,9 @@
 #include "array_ptr.h"
 #include <cassert>
 #include <initializer_list>
+#include <iterator>
 #include <stdexcept>
+
 
 struct ReserveProxyObj {
     size_t capacity_to_reserve_;
@@ -22,7 +24,6 @@ private:
     ArrayPtr<Type> raw_vector_;
     size_t size_ = 0;
     size_t capacity_ = 0;
-    Type *default_value_ = new Type();
 
 public:
     using Iterator = Type*;
@@ -44,8 +45,6 @@ public:
     SimpleVector(const SimpleVector& other);
     // оператор присваивания
     SimpleVector& operator=(const SimpleVector& rhs);
-    // Подчищаем хвосты при удалении вектора
-    ~SimpleVector();
     // Возвращает количество элементов в массиве
     size_t GetSize() const noexcept;
     // Возвращает вместимость массива
@@ -110,7 +109,7 @@ void SimpleVector<Type>::swap(SimpleVector<Type> &other) noexcept {
 
 template<typename Type>
 SimpleVector<Type>::SimpleVector(size_t size) : SimpleVector() {
-    SimpleVector<Type> temp(size, *default_value_);
+    SimpleVector<Type> temp(size, Type{});
     swap(temp);
 }
 
@@ -151,11 +150,6 @@ SimpleVector<Type> &SimpleVector<Type>::operator=(const SimpleVector &rhs) {
         swap(temp);
     }
     return *this;
-}
-
-template<typename Type>
-SimpleVector<Type>::~SimpleVector() {
-    delete default_value_;
 }
 
 template<typename Type>
@@ -212,7 +206,7 @@ void SimpleVector<Type>::Resize(size_t new_size) {
         if (new_size <= size_) {
             size_ = new_size;
         } else {
-            std::fill(raw_vector_.Get() + size_, raw_vector_.Get() + new_size, *default_value_);
+            std::fill(raw_vector_.Get() + size_, raw_vector_.Get() + new_size, Type{});
             size_ = new_size;
         }
     } else {
