@@ -167,11 +167,8 @@ SimpleVector<Type> &SimpleVector<Type>::operator=(const SimpleVector &rhs) {
 template<typename Type>
 SimpleVector<Type> &SimpleVector<Type>::operator=(SimpleVector&& rhs) {
     if (raw_vector_.Get() != rhs.raw_vector_.Get()) {
-        raw_vector_ = std::move(rhs.raw_vector_);
-        size_ = rhs.size_;
-        capacity_ = rhs.size_;
-        rhs.size_ = 0;
-        rhs.capacity_ = 0;
+        SimpleVector<Type> temp(std::move(rhs));
+        swap(temp);
     }
     return *this;
 }
