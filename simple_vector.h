@@ -7,7 +7,6 @@
 #include <iterator>
 #include <stdexcept>
 
-
 struct ReserveProxyObj {
     size_t capacity_to_reserve_;
     ReserveProxyObj(size_t capacity_to_reserve)
@@ -36,15 +35,17 @@ public:
     // конструктор с резервированием
     SimpleVector(ReserveProxyObj obj);
     // Создаёт вектор из size элементов, инициализированных значением value
-    SimpleVector(size_t size, const Type& value);
+    SimpleVector(size_t size, const Type &value);
     // Создаёт вектор из std::initializer_list
     SimpleVector(std::initializer_list<Type> init);
     // Меняет вектора местами
     void swap(SimpleVector<Type> &other) noexcept;
     // конструктор копирования
     SimpleVector(const SimpleVector& other);
+    SimpleVector(SimpleVector&& other);
     // оператор присваивания
     SimpleVector& operator=(const SimpleVector& rhs);
+    SimpleVector& operator=(SimpleVector&& rhs);
     // Возвращает количество элементов в массиве
     size_t GetSize() const noexcept;
     // Возвращает вместимость массива
@@ -88,14 +89,14 @@ public:
     ConstIterator cend() const noexcept;
     // Добавляет элемент в конец вектора
     // При нехватке места увеличивает вдвое вместимость вектора
-    void PushBack(const Type& item);
+    void PushBack(Type item);
     // "Удаляет" последний элемент вектора. Вектор не должен быть пустым
     void PopBack() noexcept;
     // Вставляет значение value в позицию pos.
     // Возвращает итератор на вставленное значение
     // Если перед вставкой значения вектор был заполнен полностью,
     // вместимость вектора должна увеличиться вдвое, а для вектора вместимостью 0 стать равной 1
-    Iterator Insert(ConstIterator pos, const Type& value);
+    Iterator Insert(ConstIterator pos, Type value);
     // Удаляет элемент вектора в указанной позиции
     Iterator Erase(ConstIterator pos);
 };
@@ -109,8 +110,10 @@ void SimpleVector<Type>::swap(SimpleVector<Type> &other) noexcept {
 
 template<typename Type>
 SimpleVector<Type>::SimpleVector(size_t size) : SimpleVector() {
-    SimpleVector<Type> temp(size, Type{});
-    swap(temp);
+    ArrayPtr<Type> array_copy(size);
+    array_copy.swap(raw_vector_);
+    size_ = size;
+    capacity_ = size;
 }
 
 template<typename Type>
@@ -144,10 +147,31 @@ SimpleVector<Type>::SimpleVector(const SimpleVector<Type> &other) {
 }
 
 template<typename Type>
+SimpleVector<Type>::SimpleVector(SimpleVector &&other) {
+    raw_vector_ = std::move(other.raw_vector_);
+    size_ = other.size_;
+    capacity_ = other.size_;
+    other.size_ = 0;
+    other.capacity_ = 0;
+}
+
+template<typename Type>
 SimpleVector<Type> &SimpleVector<Type>::operator=(const SimpleVector &rhs) {
     if (raw_vector_.Get() != rhs.raw_vector_.Get()) {
         SimpleVector<Type> temp(rhs);
         swap(temp);
+    }
+    return *this;
+}
+
+template<typename Type>
+SimpleVector<Type> &SimpleVector<Type>::operator=(SimpleVector&& rhs) {
+    if (raw_vector_.Get() != rhs.raw_vector_.Get()) {
+        raw_vector_ = std::move(rhs.raw_vector_);
+        size_ = rhs.size_;
+        capacity_ = rhs.size_;
+        rhs.size_ = 0;
+        rhs.capacity_ = 0;
     }
     return *this;
 }
@@ -257,15 +281,15 @@ typename SimpleVector<Type>::ConstIterator SimpleVector<Type>::cend() const noex
 }
 
 template<typename Type>
-void SimpleVector<Type>::PushBack(const Type &item){
+void SimpleVector<Type>::PushBack(Type item){
     if (size_ < capacity_) {
-        raw_vector_[size_] = item;
+        raw_vector_[size_] = std::move(item);
         ++size_;
     } else {
         SimpleVector<Type> temp(std::max(size_ * 2, static_cast<size_t>(1)));
         temp.size_ = size_ + 1;
-        std::copy(begin(), end(), temp.begin());
-        temp[size_] = item;
+        std::copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), temp.begin());
+        temp[size_] = std::move(item);
         swap(temp);
     }
 }
@@ -277,18 +301,18 @@ void SimpleVector<Type>::PopBack() noexcept {
 }
 
 template<typename Type>
-typename SimpleVector<Type>::Iterator SimpleVector<Type>::Insert(ConstIterator pos, const Type &value) {
+typename SimpleVector<Type>::Iterator SimpleVector<Type>::Insert(ConstIterator pos, Type value) {
     size_t index = static_cast<size_t>(pos - begin());
     if (size_ < capacity_) {
-        std::copy_backward(begin() + index, end(), end() + 1);
-        raw_vector_[index] = value;
+        std::copy_backward(std::make_move_iterator(begin() + index), std::make_move_iterator(end()), end() + 1);
+        raw_vector_[index] = std::move(value);
         ++size_;
     } else {
         SimpleVector<Type> temp(std::max(size_ * 2, static_cast<size_t>(1)));
         temp.size_ = size_ + 1;
-        std::copy(begin(), begin() + index, temp.begin());
-        temp[index] = value;
-        std::copy(begin() + index, end(), temp.begin() + index + 1);
+        std::copy(std::make_move_iterator(begin()), std::make_move_iterator(begin() + index), temp.begin());
+        temp[index] = std::move(value);
+        std::copy(std::make_move_iterator(begin() + index), std::make_move_iterator(end()), temp.begin() + index + 1);
         swap(temp);
     }
     return begin() + index;
@@ -297,14 +321,16 @@ typename SimpleVector<Type>::Iterator SimpleVector<Type>::Insert(ConstIterator p
 template<typename Type>
 typename SimpleVector<Type>::Iterator SimpleVector<Type>::Erase(ConstIterator pos) {
     size_t index = static_cast<size_t>(pos - begin());
-    std::copy(begin() + index + 1, end(), begin() + index);
+    std::copy(std::make_move_iterator(begin() + index + 1), std::make_move_iterator(end()), begin() + index);
     --size_;
     return begin() + index;
 }
 
 template <typename Type>
 inline bool operator==(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-    return std::equal(lhs.begin(), lhs.end(), rhs.begin(), rhs.end());
+    return (&lhs == &rhs)
+        || (lhs.GetSize() == rhs.GetSize()
+            && std::equal(lhs.begin(), lhs.end(), rhs.begin()));
 }
 
 template <typename Type>
@@ -319,7 +345,7 @@ inline bool operator<(const SimpleVector<Type>& lhs, const SimpleVector<Type>& r
 
 template <typename Type>
 inline bool operator<=(const SimpleVector<Type>& lhs, const SimpleVector<Type>& rhs) {
-    return (lhs < rhs || lhs == rhs);
+    return !(rhs < lhs);
 }
 
 template <typename Type>

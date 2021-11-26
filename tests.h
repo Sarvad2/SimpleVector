@@ -267,7 +267,7 @@ void TestReserveMethod() {
     cout << "Done!"s << endl;
 }
 
-/*
+
 class X {
 public:
     X()
@@ -292,6 +292,11 @@ public:
 private:
     size_t x_;
 };
+ostream& operator<<(ostream &out, const X& x) {
+    out << x.GetX ();
+    return out;
+}
+
 
 SimpleVector<int> GenerateVector(size_t size) {
     SimpleVector<int> v(size);
@@ -340,6 +345,7 @@ void TestNamedMoveOperator() {
     assert(vector_to_move.GetSize() == 0);
     cout << "Done!" << endl << endl;
 }
+
 
 void TestNoncopiableMoveConstructor() {
     const size_t size = 5;
@@ -410,5 +416,5 @@ void TestNoncopiableErase() {
     assert(it->GetX() == 1);
     cout << "Done!" << endl << endl;
 }
-*/
+
 

@@ -10,15 +10,19 @@ int main() {
     Test2();
     TestReserveMethod();
     TestReserveConstructor();
-    /*
+
     TestTemporaryObjConstructor();
     TestTemporaryObjOperator();
     TestNamedMoveConstructor();
     TestNamedMoveOperator();
+
     TestNoncopiableMoveConstructor();
+
     TestNoncopiablePushBack();
+
     TestNoncopiableInsert();
+
     TestNoncopiableErase();
-    */
+
     return 0;
 }

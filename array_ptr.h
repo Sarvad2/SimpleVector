@@ -16,7 +16,7 @@ public:
         if (size == 0) {
             raw_ptr_ = nullptr;
         } else {
-            raw_ptr_ = new Type[size];
+            raw_ptr_ = new Type[size]{};
         }
     }
 
@@ -27,6 +27,10 @@ public:
 
     // Запрещаем копирование
     ArrayPtr(const ArrayPtr&) = delete;
+    // переопределяем перемещающее копирование
+    ArrayPtr(ArrayPtr&& other) {
+        raw_ptr_ = std::exchange(other.raw_ptr_, nullptr);
+    }
 
     ~ArrayPtr() {
         if (raw_ptr_ != nullptr) {
@@ -36,7 +40,11 @@ public:
 
     // Запрещаем присваивание
     ArrayPtr& operator=(const ArrayPtr&) = delete;
-
+    // переопределяем перемещающее присваивание
+    ArrayPtr& operator=(ArrayPtr&& rhs) {
+        raw_ptr_ = std::exchange(rhs.raw_ptr_, nullptr);
+        return *this;
+    }
     // Прекращает владением массивом в памяти, возвращает значение адреса массива
     // После вызова метода указатель на массив должен обнулиться
     [[nodiscard]] Type* Release() noexcept {
