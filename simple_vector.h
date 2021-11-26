@@ -133,7 +133,7 @@ SimpleVector<Type>::SimpleVector(size_t size, const Type &value) : SimpleVector(
 template<typename Type>
 SimpleVector<Type>::SimpleVector(std::initializer_list<Type> init) : SimpleVector() {
     ArrayPtr<Type> array_copy(init.size());
-    std::copy(init.begin(), init.end(), array_copy.Get());
+    std::copy(std::make_move_iterator(init.begin()), std::make_move_iterator(init.end()), array_copy.Get());
     array_copy.swap(raw_vector_);
     size_ = init.size();
     capacity_ = init.size();
@@ -235,7 +235,7 @@ void SimpleVector<Type>::Resize(size_t new_size) {
         }
     } else {
         SimpleVector<Type> temp(std::max(capacity_ * 2, new_size));
-        std::copy(begin(), end(), temp.begin());
+        std::copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), temp.begin());
         swap(temp);
     }
 }
@@ -244,7 +244,7 @@ template<typename Type>
 void SimpleVector<Type>::Reserve(size_t new_capacity) {
     if (new_capacity > capacity_) {
         SimpleVector<Type> temp(new_capacity);
-        std::copy(begin(), end(), temp.begin());
+        std::copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), temp.begin());
         temp.size_ = size_;
         swap(temp);
     }
