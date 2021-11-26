@@ -29,6 +29,9 @@ public:
     ArrayPtr(const ArrayPtr&) = delete;
     // переопределяем перемещающее копирование
     ArrayPtr(ArrayPtr&& other) {
+        if (raw_ptr_ != nullptr) {
+            delete[] raw_ptr_;
+        }
         raw_ptr_ = std::exchange(other.raw_ptr_, nullptr);
     }
 
@@ -42,6 +45,9 @@ public:
     ArrayPtr& operator=(const ArrayPtr&) = delete;
     // переопределяем перемещающее присваивание
     ArrayPtr& operator=(ArrayPtr&& rhs) {
+        if (raw_ptr_ != nullptr) {
+            delete[] raw_ptr_;
+        }
         raw_ptr_ = std::exchange(rhs.raw_ptr_, nullptr);
         return *this;
     }
