@@ -1,7 +1,6 @@
 #include <iostream>
-#include "simple_vector.h"
 
-// Tests
+#include "simple_vector.h"
 #include "tests.h"
 
 using namespace std;
@@ -10,18 +9,13 @@ int main() {
     Test2();
     TestReserveMethod();
     TestReserveConstructor();
-
     TestTemporaryObjConstructor();
     TestTemporaryObjOperator();
     TestNamedMoveConstructor();
     TestNamedMoveOperator();
-
     TestNoncopiableMoveConstructor();
-
     TestNoncopiablePushBack();
-
     TestNoncopiableInsert();
-
     TestNoncopiableErase();
 
     return 0;

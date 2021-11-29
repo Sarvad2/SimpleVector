@@ -1,11 +1,12 @@
 #pragma once
 
 #include <algorithm>
-#include "array_ptr.h"
 #include <cassert>
 #include <initializer_list>
 #include <iterator>
 #include <stdexcept>
+
+#include "array_ptr.h"
 
 struct ReserveProxyObj {
     size_t capacity_to_reserve_;
@@ -20,7 +21,8 @@ ReserveProxyObj Reserve(size_t capacity_to_reserve) {
 template <typename Type>
 class SimpleVector {
 private:
-    ArrayPtr<Type> raw_vector_;
+    using Data = ArrayPtr<Type>;
+    Data raw_vector_;
     size_t size_ = 0;
     size_t capacity_ = 0;
 
@@ -109,11 +111,7 @@ void SimpleVector<Type>::swap(SimpleVector<Type> &other) noexcept {
 }
 
 template<typename Type>
-SimpleVector<Type>::SimpleVector(size_t size) : SimpleVector() {
-    ArrayPtr<Type> array_copy(size);
-    array_copy.swap(raw_vector_);
-    size_ = size;
-    capacity_ = size;
+SimpleVector<Type>::SimpleVector(size_t size) : raw_vector_(size), size_(size), capacity_(size) {
 }
 
 template<typename Type>
@@ -122,21 +120,13 @@ SimpleVector<Type>::SimpleVector(ReserveProxyObj obj) : SimpleVector() {
 }
 
 template<typename Type>
-SimpleVector<Type>::SimpleVector(size_t size, const Type &value) : SimpleVector() {
-    ArrayPtr<Type> array_copy(size);
-    std::fill(array_copy.Get(), array_copy.Get() + size, value);
-    array_copy.swap(raw_vector_);
-    size_ = size;
-    capacity_ = size;
+SimpleVector<Type>::SimpleVector(size_t size, const Type &value) : SimpleVector(size) {
+    std::fill(begin(), end(), value);
 }
 
 template<typename Type>
-SimpleVector<Type>::SimpleVector(std::initializer_list<Type> init) : SimpleVector() {
-    ArrayPtr<Type> array_copy(init.size());
-    std::copy(std::make_move_iterator(init.begin()), std::make_move_iterator(init.end()), array_copy.Get());
-    array_copy.swap(raw_vector_);
-    size_ = init.size();
-    capacity_ = init.size();
+SimpleVector<Type>::SimpleVector(std::initializer_list<Type> init) : SimpleVector(init.size ()) {
+    std::copy(std::make_move_iterator(init.begin()), std::make_move_iterator(init.end()), begin());
 }
 
 template<typename Type>
@@ -149,15 +139,13 @@ SimpleVector<Type>::SimpleVector(const SimpleVector<Type> &other) {
 template<typename Type>
 SimpleVector<Type>::SimpleVector(SimpleVector &&other) {
     raw_vector_ = std::move(other.raw_vector_);
-    size_ = other.size_;
-    capacity_ = other.size_;
-    other.size_ = 0;
-    other.capacity_ = 0;
+    size_ = std::exchange(other.size_, 0);
+    capacity_ = std::exchange(other.capacity_, 0);
 }
 
 template<typename Type>
 SimpleVector<Type> &SimpleVector<Type>::operator=(const SimpleVector &rhs) {
-    if (raw_vector_.Get() != rhs.raw_vector_.Get()) {
+    if (this != &rhs) {
         SimpleVector<Type> temp(rhs);
         swap(temp);
     }
@@ -166,7 +154,7 @@ SimpleVector<Type> &SimpleVector<Type>::operator=(const SimpleVector &rhs) {
 
 template<typename Type>
 SimpleVector<Type> &SimpleVector<Type>::operator=(SimpleVector&& rhs) {
-    if (raw_vector_.Get() != rhs.raw_vector_.Get()) {
+    if (this != &rhs) {
         SimpleVector<Type> temp(std::move(rhs));
         swap(temp);
     }
@@ -224,12 +212,10 @@ void SimpleVector<Type>::Clear() noexcept {
 template<typename Type>
 void SimpleVector<Type>::Resize(size_t new_size) {
     if (new_size <= capacity_) {
-        if (new_size <= size_) {
-            size_ = new_size;
-        } else {
+        if (new_size > size_) {
             std::fill(raw_vector_.Get() + size_, raw_vector_.Get() + new_size, Type{});
-            size_ = new_size;
         }
+        size_ = new_size;
     } else {
         SimpleVector<Type> temp(std::max(capacity_ * 2, new_size));
         std::copy(std::make_move_iterator(begin()), std::make_move_iterator(end()), temp.begin());
@@ -299,6 +285,9 @@ void SimpleVector<Type>::PopBack() noexcept {
 
 template<typename Type>
 typename SimpleVector<Type>::Iterator SimpleVector<Type>::Insert(ConstIterator pos, Type value) {
+    if (pos < begin() || pos > end()) {
+        throw std::out_of_range("Iterator is out of range");
+    }
     size_t index = static_cast<size_t>(pos - begin());
     if (size_ < capacity_) {
         std::copy_backward(std::make_move_iterator(begin() + index), std::make_move_iterator(end()), end() + 1);
@@ -317,6 +306,9 @@ typename SimpleVector<Type>::Iterator SimpleVector<Type>::Insert(ConstIterator p
 
 template<typename Type>
 typename SimpleVector<Type>::Iterator SimpleVector<Type>::Erase(ConstIterator pos) {
+    if (pos < begin() || pos >= end()) {
+        throw std::out_of_range("Iterator is out of range");
+    }
     size_t index = static_cast<size_t>(pos - begin());
     std::copy(std::make_move_iterator(begin() + index + 1), std::make_move_iterator(end()), begin() + index);
     --size_;
