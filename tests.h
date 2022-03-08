@@ -280,9 +280,11 @@ public:
     X& operator=(const X& other) = delete;
     X(X&& other) {
         x_ = exchange(other.x_, 0);
+        std::cout << " move construct ";
     }
     X& operator=(X&& other) {
         x_ = exchange(other.x_, 0);
+        std::cout << " =move ";
         return *this;
     }
     size_t GetX() const {
